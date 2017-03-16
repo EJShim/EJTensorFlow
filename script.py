@@ -1,6 +1,14 @@
+import tensorflow as tf
+import random
+import numpy as np
+from Manager import E_ImageManager
+
+
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets("/tmp/data/", one_hot=True)
+mnist = input_data.read_data_sets("./MNistData", one_hot=True)
+
+
 
 # Parameters
 learning_rate = 0.001
@@ -29,8 +37,7 @@ def conv2d(x, W, b, strides=1):
 
 def maxpool2d(x, k=2):
     # MaxPool2D wrapper
-    return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1],
-                          padding='SAME')
+    return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
 
 
 # Create model
@@ -56,8 +63,9 @@ def conv_net(x, weights, biases, dropout):
     # Apply Dropout
     fc1 = tf.nn.dropout(fc1, dropout)
 
-    # Output, class prediction
+    # Output, class predictio
     out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
+    # out = tf.nn.softmax(out)
     return out
 
 # Store layers weight & bias
@@ -93,29 +101,41 @@ accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
 # Initializing the variables
 init = tf.global_variables_initializer()
 
+
+
 # Launch the graph
 with tf.Session() as sess:
     sess.run(init)
+
+
+    # Calculate accuracy for 256 mnist test images
+    randidx = random.randrange(0, mnist.test.images.shape[0])
+    singleImage = np.array( [mnist.test.images[randidx]])
+    print("Testing Result of a Random Idx : ", sess.run(pred, feed_dict={x:singleImage, keep_prob: 1.} ));
+    print("Correct Answer : ", mnist.test.labels[randidx])
+
+
     step = 1
     # Keep training until reach max iterations
     while step * batch_size < training_iters:
         batch_x, batch_y = mnist.train.next_batch(batch_size)
         # Run optimization op (backprop)
-        sess.run(optimizer, feed_dict={x: batch_x, y: batch_y,
-                                       keep_prob: dropout})
+        sess.run(optimizer, feed_dict={x: batch_x, y: batch_y, keep_prob: dropout})
+
         if step % display_step == 0:
             # Calculate batch loss and accuracy
-            loss, acc = sess.run([cost, accuracy], feed_dict={x: batch_x,
-                                                              y: batch_y,
-                                                              keep_prob: 1.})
-            print("Iter " + str(step*batch_size) + ", Minibatch Loss= " + \
-                  "{:.6f}".format(loss) + ", Training Accuracy= " + \
-                  "{:.5f}".format(acc))
+            loss, acc = sess.run([cost, accuracy], feed_dict={x: batch_x, y: batch_y, keep_prob: 1.})
+            print("Iter " + str(step*batch_size) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
         step += 1
+
     print("Optimization Finished!")
 
-    # Calculate accuracy for 256 mnist test images
-    print("Testing Accuracy:", \
-        sess.run(accuracy, feed_dict={x: mnist.test.images[:256],
-                                      y: mnist.test.labels[:256],
-                                      keep_prob: 1.}))
+
+
+
+    #Show Selected Image
+    # E_ImageManager.ShowMnistImage(mnist.test.images[randidx])
+
+
+
+    # print("Testing Accuracy:", sess.run(accuracy, feed_dict={x: mnist.test.images[:256], y: mnist.test.labels[:256], keep_prob: 1.}))
