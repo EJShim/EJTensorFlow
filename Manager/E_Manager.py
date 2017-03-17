@@ -1,13 +1,22 @@
 import random
+from PyQt5.QtWidgets import QApplication
 import tensorflow as tf
 import numpy as np
 
 class E_Manager:
-    def __init__(self):
+    def __init__(self, window):
+
+        self.window = window
+        self.sess = None
+        self.plotX = []
+        self.plotY = []
 
         self.InitMNistData()
         self.InitNetwork()
         self.InitFunctions()
+
+
+
 
     def InitMNistData(self):
         # Import MNIST data
@@ -28,7 +37,7 @@ class E_Manager:
 
         # # Parameter
         self.learning_rate = 0.001
-        self.training_iters = 200
+        self.training_iters = 100000
         self.batch_size = 128
         self.display_step = 10
 
@@ -64,7 +73,7 @@ class E_Manager:
         }
 
 
-    def softmax(a):
+    def softmax(self, a):
         c = np.max(a)
         exp_a = np.exp(a-c)
         sum_exp_a = np.sum(exp_a)
@@ -110,8 +119,7 @@ class E_Manager:
 
         # Output, softmax prediction
         out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
-        # out = tf.nn.softmax(out)
-        # out = tf.nn.softmax(out)
+
         return out
 
     def InitFunctions(self):
@@ -133,30 +141,55 @@ class E_Manager:
         init = tf.global_variables_initializer()
 
         # Launch the graph
-        with tf.Session() as sess:
-            sess.run(init)
+        self.sess = tf.Session()
+        self.sess.run(init)
+
+        step = 1
+        # Keep training until reach max iterations
+        # QApplication.processEvents()
+        while step * self.batch_size < self.training_iters:
+            batch_x, batch_y = self.mnist.train.next_batch(self.batch_size)
+            # Run optimization op (backprop)
+            self.sess.run(self.optimizer, feed_dict={self.x: batch_x, self.y: batch_y, self.keep_prob: self.dropout})
+
+            if step % self.display_step == 0:
+                # Calculate batch loss and accuracy
+                loss, acc = self.sess.run([self.cost, self.accuracy], feed_dict={self.x: batch_x, self.y: batch_y, self.keep_prob: 1.})
+                # print(self.weights['wc1'].eval()[0][0][0][0])
+
+                print("Iter " + str(step*self.batch_size) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
+                self.plotX.append(step*self.batch_size)
+                self.plotY.append(loss)
+
+                QApplication.processEvents()
+                self.window.DrawGraph()
 
 
-            step = 1
-            # Keep training until reach max iterations
-            while self.step * self.batch_size < self.training_iters:
-                batch_x, batch_y = self.mnist.train.next_batch(batch_size)
-                # Run optimization op (backprop)
-                sess.run(self.optimizer, feed_dict={self.x: batch_x, self.y: batch_y, self.keep_prob: self.dropout})
-
-                if self.step % self.display_step == 0:
-                    # Calculate batch loss and accuracy
-                    loss, acc = sess.run([self.cost, self.accuracy], feed_dict={self.x: batch_x, self.y: batch_y, self.keep_prob: 1.})
-                    print(self.weights['wc1'].eval()[0][0][0][0])
-                    # print("Iter " + str(step*batch_size) + ", Minibatch Loss= " + "{:.6f}".format(loss) + ", Training Accuracy= " + "{:.5f}".format(acc))
 
 
-                step += 1
+            step += 1
 
-            print("Optimization Finished!")
+        self.window.SetLog("Optimization Finished!")
 
-        def RunPrediction(self):
-            print("Run Prediction")
+    def RunPrediction(self, image):
+
+        if(self.sess):
+            image = np.reshape(image, (1, 784))
+            pred = self.sess.run(self.pred, feed_dict={self.x: image, self.keep_prob:1.} )
+            pred = np.multiply(pred, 0.0001)
+            pred = self.softmax(pred)
+            pred = np.multiply(pred, 100.0)
+
+            res = np.argmax(pred[0])
+
+            print(pred)
+            print(res)
+
+            log = "Predicted Digit : " + str(res)
+            self.window.SetLog(log)
+        else:
+            print("not trained")
+
 
 
     # print("Testing Accuracy:", sess.run(accuracy, feed_dict={x: mnist.test.images[:256], y: mnist.test.labels[:256], keep_prob: 1.}))

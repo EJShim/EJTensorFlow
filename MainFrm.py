@@ -20,6 +20,7 @@ class MyMainWindow(QMainWindow):
         self.InitCentralWidget()
         self.InitManager()
 
+
     def InitCentralWidget(self):
 
         MainLayout = QHBoxLayout()
@@ -50,18 +51,19 @@ class MyMainWindow(QMainWindow):
 
 
     def InitManager(self):
-        self.Mgr = E_Manager()
+        Mgr = E_Manager(self)
+        self.Mgr = Mgr
 
 
     def OnRunTrainning(self):
-        self.SetLog("Run Trainning")
+        self.Mgr.RunTrainning()
 
 
     def OnRandomPrediction(self):
 
         image, idx = self.Mgr.GetRandomImage()
+        self.Mgr.RunPrediction(image)
 
-        self.SetLog("Generate Random Test Image")
         plot = self.m_figure.add_subplot(111)
         plot.imshow(image)
         plot.axis('off')
@@ -69,6 +71,33 @@ class MyMainWindow(QMainWindow):
         self.m_canvas.draw()
 
 
+    def DrawGraph(self):
+        ax = self.m_figure.add_subplot(111)
+        ax.axis('on')
+        ax.set_title("Loss Function Visualization")
+        ax.set_xlabel("iteration");
+        ax.set_ylabel("Loss");
+        ax.grid(True)
+
+        ax.plot( self.Mgr.plotX, self.Mgr.plotY, 'ro-' )
+
+        self.m_canvas.draw()
+
+
 
     def SetLog(self, string):
-        self.m_logBox.appendPlainText(string)
+        self.m_logBox.appendPlainText(str(string))
+
+
+
+class TrainningThread(QThread):
+
+    taskFinished = pyqtSignal()
+
+    def __init__(self, Mgr):
+        super(QThread, self).__init__(None)
+        self.Mgr = Mgr
+
+    def run(self):
+        self.Mgr.RunTrainning()
+        self.taskFinished.emit()
