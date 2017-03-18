@@ -27,14 +27,17 @@ class MyMainWindow(QMainWindow):
         self.m_centralWidget.setLayout(MainLayout)
 
         LeftLayout = QVBoxLayout()
-        RightLayout = QVBoxLayout()
-
         MainLayout.addLayout(LeftLayout)
+
+        RightLayout = QVBoxLayout()
         MainLayout.addLayout(RightLayout)
+
+        self.renderLayout = QHBoxLayout()
+        RightLayout.addLayout(self.renderLayout)
 
         self.m_figure = plt.Figure()
         self.m_canvas = FigureCanvas(self.m_figure)
-        RightLayout.addWidget(self.m_canvas)
+        self.renderLayout.addWidget(self.m_canvas)
 
         self.m_logBox = QPlainTextEdit()
         self.m_logBox.setDisabled(True)
@@ -62,11 +65,12 @@ class MyMainWindow(QMainWindow):
     def OnRandomPrediction(self):
 
         image, idx = self.Mgr.GetRandomImage()
-        self.Mgr.RunPrediction(image)
 
-        plot = self.m_figure.add_subplot(111)
-        plot.imshow(image)
-        plot.axis('off')
+        # plot = self.m_figure.add_subplot(121)
+        # plot.imshow(image)
+        # plot.axis('off')
+
+        self.Mgr.RunPrediction(image)
 
         self.m_canvas.draw()
 

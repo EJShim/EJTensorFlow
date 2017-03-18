@@ -37,7 +37,7 @@ class E_Manager:
 
         # # Parameter
         self.learning_rate = 0.001
-        self.training_iters = 100000
+        self.training_iters = 50000
         self.batch_size = 128
         self.display_step = 10
 
@@ -49,6 +49,7 @@ class E_Manager:
         # tf Graph input
         self.x = tf.placeholder(tf.float32, [None, self.n_input])
         self.y = tf.placeholder(tf.float32, [None, self.n_classes])
+        # self.visual = tf.placeholder(tf.bool)
         self.keep_prob = tf.placeholder(tf.float32) #dropout (keep probability)
 
 
@@ -103,6 +104,7 @@ class E_Manager:
         # Max Pooling (down-sampling)
         conv1 = self.maxpool2d(conv1, k=2)
 
+
         # Convolution Layer
         conv2 = self.conv2d(conv1, weights['wc2'], biases['bc2'])
         # Max Pooling (down-sampling)
@@ -121,6 +123,61 @@ class E_Manager:
         out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
         return out
+
+    def visual_prediction(self, x, dropout):
+        # Reshape input picture
+        x = self.sess.run(tf.reshape(x, shape=[-1, 28, 28, 1]) )
+        xout = np.reshape(x, (28, 28))
+
+        #plot original
+        plot = self.window.m_figure.add_subplot(131)
+        plot.set_title("Input Image")
+        plot.imshow(xout)
+        plot.axis('off')
+
+
+        # Convolution Layer
+        conv1 = self.sess.run(self.conv2d(x, self.weights['wc1'], self.biases['bc1']))
+        # Max Pooling (down-sampling)
+        conv1 = self.sess.run(self.maxpool2d(conv1, k=2))
+
+        conv1out = np.reshape(conv1, (14*32, 14))
+
+
+        plot = self.window.m_figure.add_subplot(132)
+        plot.set_title("First Layer(14x14x32)")
+        plot.imshow(conv1out)
+        plot.axis('off')
+
+
+
+        # Convolution Layer
+        conv2 = self.sess.run(self.conv2d(conv1, self.weights['wc2'], self.biases['bc2']))
+        # Max Pooling (down-sampling)
+        conv2 = self.sess.run(self.maxpool2d(conv2, k=2))
+
+        conv2out = np.reshape(conv2, (7*64, 7))
+
+
+        plot = self.window.m_figure.add_subplot(133)
+        plot.set_title("Second Layer(7x7x64)")
+        plot.imshow(conv2out)
+        plot.axis('off')
+
+        # Fully connected layer
+        # Reshape conv2 output to fit fully connected layer input
+        fc1 = self.sess.run(tf.reshape(conv2, [-1, self.weights['wd1'].get_shape().as_list()[0]]))
+        fc1 = self.sess.run(tf.add(tf.matmul(fc1, self.weights['wd1']), self.biases['bd1']))
+        fc1 = self.sess.run(tf.nn.relu(fc1))
+        # Apply Dropout
+        # fc1 = tf.nn.dropout(fc1, dropout)
+
+
+        # Output, softmax prediction
+        out = self.sess.run(tf.add(tf.matmul(fc1, self.weights['out']), self.biases['out']))
+
+        return out
+
 
     def InitFunctions(self):
         # Construct model
@@ -175,15 +232,15 @@ class E_Manager:
 
         if(self.sess):
             image = np.reshape(image, (1, 784))
-            pred = self.sess.run(self.pred, feed_dict={self.x: image, self.keep_prob:1.} )
+            # pred = self.sess.run(self.pred, feed_dict={self.x: image, self.keep_prob:1.} )
+            pred = self.visual_prediction(image, 1.)
+
             pred = np.multiply(pred, 0.0001)
             pred = self.softmax(pred)
             pred = np.multiply(pred, 100.0)
 
             res = np.argmax(pred[0])
 
-            print(pred)
-            print(res)
 
             log = "Predicted Digit : " + str(res)
             self.window.SetLog(log)
