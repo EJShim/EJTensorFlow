@@ -152,6 +152,9 @@ plt.show()
 
 # Plot class activation maps
 fig, axs = plt.subplots(2, 5, figsize=(15, 6))
+
+#Class Activation Map
+camavg = np.zeros((14, 14))
 for i in range(10):
     predlabel   = np.argmax(outval)
     predweights = cweights[:, i:i+1]

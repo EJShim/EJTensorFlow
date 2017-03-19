@@ -1,6 +1,7 @@
 import random
 from PyQt5.QtWidgets import QApplication
 import tensorflow as tf
+import matplotlib.pyplot as plt
 import numpy as np
 
 class E_Manager:
@@ -101,18 +102,20 @@ class E_Manager:
 
         # Convolution Layer
         conv1 = self.conv2d(x, weights['wc1'], biases['bc1'])
+
+
         # Max Pooling (down-sampling)
-        conv1 = self.maxpool2d(conv1, k=2)
+        maxpool1 = self.maxpool2d(conv1, k=2)
 
 
         # Convolution Layer
-        conv2 = self.conv2d(conv1, weights['wc2'], biases['bc2'])
+        conv2 = self.conv2d(maxpool1, weights['wc2'], biases['bc2'])
         # Max Pooling (down-sampling)
-        conv2 = self.maxpool2d(conv2, k=2)
+        maxpool2 = self.maxpool2d(conv2, k=2)
 
         # Fully connected layer
         # Reshape conv2 output to fit fully connected layer input
-        fc1 = tf.reshape(conv2, [-1, weights['wd1'].get_shape().as_list()[0]])
+        fc1 = tf.reshape(maxpool2, [-1, weights['wd1'].get_shape().as_list()[0]])
         fc1 = tf.add(tf.matmul(fc1, weights['wd1']), biases['bd1'])
         fc1 = tf.nn.relu(fc1)
         # Apply Dropout
@@ -120,68 +123,17 @@ class E_Manager:
 
 
         # Output, softmax prediction
-        out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
+        result = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
 
-        return out
-
-    def visual_prediction(self, x, dropout):
-        # Reshape input picture
-        x = self.sess.run(tf.reshape(x, shape=[-1, 28, 28, 1]) )
-        xout = np.reshape(x, (28, 28))
-
-        #plot original
-        plot = self.window.m_figure.add_subplot(131)
-        plot.set_title("Input Image")
-        plot.imshow(xout)
-        plot.axis('off')
-
-
-        # Convolution Layer
-        conv1 = self.sess.run(self.conv2d(x, self.weights['wc1'], self.biases['bc1']))
-        # Max Pooling (down-sampling)
-        conv1 = self.sess.run(self.maxpool2d(conv1, k=2))
-
-        conv1out = np.reshape(conv1, (14*32, 14))
-
-
-        plot = self.window.m_figure.add_subplot(132)
-        plot.set_title("First Layer(14x14x32)")
-        plot.imshow(conv1out)
-        plot.axis('off')
-
-
-
-        # Convolution Layer
-        conv2 = self.sess.run(self.conv2d(conv1, self.weights['wc2'], self.biases['bc2']))
-        # Max Pooling (down-sampling)
-        conv2 = self.sess.run(self.maxpool2d(conv2, k=2))
-
-        conv2out = np.reshape(conv2, (7*64, 7))
-
-
-        plot = self.window.m_figure.add_subplot(133)
-        plot.set_title("Second Layer(7x7x64)")
-        plot.imshow(conv2out)
-        plot.axis('off')
-
-        # Fully connected layer
-        # Reshape conv2 output to fit fully connected layer input
-        fc1 = self.sess.run(tf.reshape(conv2, [-1, self.weights['wd1'].get_shape().as_list()[0]]))
-        fc1 = self.sess.run(tf.add(tf.matmul(fc1, self.weights['wd1']), self.biases['bd1']))
-        fc1 = self.sess.run(tf.nn.relu(fc1))
-        # Apply Dropout
-        # fc1 = tf.nn.dropout(fc1, dropout)
-
-
-        # Output, softmax prediction
-        out = self.sess.run(tf.add(tf.matmul(fc1, self.weights['out']), self.biases['out']))
+        out = {'input':x, 'conv1':conv1, 'maxpool1':maxpool1, 'conv2':conv2, 'maxpool2':maxpool2, 'result':result}
 
         return out
 
 
     def InitFunctions(self):
         # Construct model
-        self.pred = self.conv_net(self.x, self.weights, self.biases, self.keep_prob)
+        self.network = self.conv_net(self.x, self.weights, self.biases, self.keep_prob)
+        self.pred = self.network['result']
 
         # Define loss and optimizer
         self.cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=self.pred, labels=self.y))
@@ -232,14 +184,59 @@ class E_Manager:
 
         if(self.sess):
             image = np.reshape(image, (1, 784))
-            # pred = self.sess.run(self.pred, feed_dict={self.x: image, self.keep_prob:1.} )
-            pred = self.visual_prediction(image, 1.)
+            network = self.sess.run(self.network, feed_dict={self.x: image, self.keep_prob:1.} )
 
+
+            inp = network['input']
+            plot = self.window.m_figure.add_subplot(2,3,1)
+            plot.set_title("Input Image")
+            plot.imshow(inp[0,:,:,0], cmap=plt.get_cmap('gray'))
+            plot.axis('off')
+
+            #Visualize First Conv
+            conv1 = network['conv1']
+            plot = self.window.m_figure.add_subplot(2,3,2)
+            plot.set_title("First Layer(32)")
+            plot.imshow(conv1[0,:,:,0], cmap=plt.get_cmap('gray'))
+            plot.axis('off')
+
+            #Visualize Second Conv
+            conv2 = network['conv2']
+            plot = self.window.m_figure.add_subplot(2,3,3)
+            plot.set_title("Second Layer(64)")
+            plot.imshow(conv2[0,:,:,0], cmap=plt.get_cmap('gray'))
+            plot.axis('off')
+
+            #prediction
+            pred = network['result']
             pred = np.multiply(pred, 0.0001)
             pred = self.softmax(pred)
             pred = np.multiply(pred, 100.0)
-
             res = np.argmax(pred[0])
+
+            cweight = self.sess.run(self.weights['out'])
+
+
+
+            #Class Activation Map
+            # camavg = np.zeros((14, 14))
+
+            predlabel   = res
+            predweights = cweight[:, predlabel:predlabel+1]
+
+            print(predweights.shape)
+
+            camsum = np.zeros((14, 14))
+            for j in range(64): #Number of conv2 output filters
+                camsum = camsum + predweights[j]*conv2[0, :, :, j]
+
+            #Average of Camsum
+            camavg = camsum / 256
+            plot = self.window.m_figure.add_subplot(2,3,4)
+            plot.set_title("Activation Map")
+            plot.imshow(camavg, cmap=plt.get_cmap('gray'))
+            plot.axis('off')
+
 
 
             log = "Predicted Digit : " + str(res)
