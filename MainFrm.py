@@ -42,6 +42,11 @@ class MyMainWindow(QMainWindow):
 
         self.m_logBox = QPlainTextEdit()
         self.m_logBox.setDisabled(True)
+
+        font = QFont()
+        font.setFamily("FreeMono")
+        font.setPointSize(24)
+        self.m_logBox.setFont(font)
         RightLayout.addWidget(self.m_logBox)
 
         self.button1 = QPushButton("Run Trainning")
@@ -94,7 +99,7 @@ class MyMainWindow(QMainWindow):
 
 
     def OnLoadImgNet(self):
-        fname = QFileDialog.getOpenFileName(self, 'Open file', "./" ,"Image files (*.jpg *.jpeg *.gif)")
+        fname = QFileDialog.getOpenFileName(self, 'Open file', "./imgSamples" ,"Image files (*.jpg *.jpeg *.gif)")
         print(fname[0])
 
         #Clear Figure

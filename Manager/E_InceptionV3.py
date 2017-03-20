@@ -3,6 +3,9 @@ import os.path
 import re
 import sys
 import tarfile
+import scipy.ndimage
+
+from matplotlib import cm as CM
 
 import numpy as np
 from six.moves import urllib
@@ -123,28 +126,93 @@ class E_InceptionV3:
 
         with tf.Session() as self.sess:
 
+            inputPlaceHolder = {'DecodeJpeg/contents:0':image_data}
+
             #decode Image Data
-            image = self.sess.run(tf.image.decode_jpeg(image_data))
-            plot = self.window.m_figure.add_subplot(111)
+            decode_tensor = self.sess.graph.get_tensor_by_name('DecodeJpeg:0')
+            image = self.sess.run(decode_tensor, inputPlaceHolder)
+
+            print(image.shape)
+            #plot Image
+            plot = self.window.m_figure.add_subplot(131)
             plot.set_title("Input Image (ImgNet trained inception v3)")
             plot.imshow(image)
             plot.axis('off')
 
-            softmax_tensor = self.sess.graph.get_tensor_by_name('softmax:0')
-            predictions = self.sess.run(softmax_tensor, {'DecodeJpeg/contents:0':image_data})
-            predictions = np.squeeze(predictions) #what is this?
+            resize_tensor = self.sess.graph.get_tensor_by_name('ResizeBilinear:0')
+            resize_out = self.sess.run(resize_tensor, inputPlaceHolder)
+            resize_out = np.reshape(resize_out, [299, 299, 3])
+            print(resize_out.shape)
 
+
+
+            #plot Resize Image
+            plot = self.window.m_figure.add_subplot(132)
+            plot.set_title("Resized Image")
+            plot.imshow(resize_out)
+            plot.axis('off')
+
+
+            #Get Conv2 layer
+            conv2_tensor = self.sess.graph.get_tensor_by_name('mixed/tower_1/conv_2:0')
+            output = self.sess.run(conv2_tensor, inputPlaceHolder);
+
+            #Average Pooling
+            #Previous Convolution
+            last_conv = self.sess.graph.get_tensor_by_name('mixed_10/join:0')
+            last_conv_out = self.sess.run(last_conv, inputPlaceHolder)
+
+            pool_weight = self.sess.graph.get_tensor_by_name('pool_3/_reshape:0')
+            poolout = self.sess.run(pool_weight, inputPlaceHolder)
+
+            out_weight = self.sess.graph.get_tensor_by_name('softmax/weights:0')
+            weightout = self.sess.run(out_weight, inputPlaceHolder);
+
+
+
+            #Get SoftMax Tensor
+            softmax_tensor = self.sess.graph.get_tensor_by_name('softmax:0')
+            predictions = self.sess.run(softmax_tensor, inputPlaceHolder)
+            predictions = np.squeeze(predictions) #what is this? (1, n) to (, n)
+
+
+            #Get Predicted Class Index C
+            C = np.argmax(predictions)
+
+
+
+
+
+            #Print
             node_lookup = NodeLookup(self.model_dir)
 
             top_k = predictions.argsort()[-self.num_top_predictions:][::-1]
 
             log = ""
+
+            camsum = np.zeros((8, 8))
+
             for node_id in top_k:
                 human_string = node_lookup.id_to_string(node_id)
                 score = predictions[node_id]
 
                 #Log
                 log += "%s (score = %.5f) \n" % (human_string, score)
+
+
+                #Activation Map
+                predweights = weightout[:, node_id:node_id+1]
+                for i in range(2048):
+                    camsum = camsum + predweights[i]*last_conv_out[0,:,:,i]
+
+            camsum = camsum / (top_k[0] * 256)
+            camsum = scipy.ndimage.zoom(camsum, 30, order=2)
+
+            plot = self.window.m_figure.add_subplot(133)
+            plot.set_title("Class Activation Map")
+            plot.imshow(camsum, cmap=CM.jet)
+            plot.axis('off')
+
 
 
             #Add Log

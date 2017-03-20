@@ -7,6 +7,6 @@ import sys
 app = QApplication([])
 
 window = MyMainWindow()
-# window.setFixedSize(800, 500)
+window.setFixedSize(1300, 800)
 window.show()
 sys.exit(app.exec_())
