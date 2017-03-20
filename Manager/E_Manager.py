@@ -3,11 +3,14 @@ from PyQt5.QtWidgets import QApplication
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
+from Manager.E_InceptionV3 import E_InceptionV3
 
 class E_Manager:
     def __init__(self, window):
 
         self.window = window
+        self.inception = E_InceptionV3(window)
+
         self.sess = tf.Session()
         self.plotX = []
         self.plotY = []
@@ -15,8 +18,6 @@ class E_Manager:
         self.InitMNistData()
         self.InitNetwork()
         self.InitFunctions()
-
-
 
 
     def InitMNistData(self):
@@ -106,10 +107,8 @@ class E_Manager:
         # Convolution Layer
         conv1 = self.conv2d(x, weights['wc1'], biases['bc1'])
 
-
         # Max Pooling (down-sampling)
         maxpool1 = self.maxpool2d(conv1, k=2)
-
 
         # Convolution Layer
         conv2 = self.conv2d(maxpool1, weights['wc2'], biases['bc2'])

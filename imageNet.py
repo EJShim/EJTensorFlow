@@ -44,9 +44,7 @@ DATA_URL = 'http://download.tensorflow.org/models/image/imagenet/inception-2015-
 # 정수 형태의 node ID를 인간이 이해할 수 있는 레이블로 변환
 class NodeLookup(object):
 
-  def __init__(self,
-               label_lookup_path=None,
-               uid_lookup_path=None):
+  def __init__(self, label_lookup_path=None, uid_lookup_path=None):
     if not label_lookup_path:
       label_lookup_path = os.path.join(
           FLAGS.model_dir, 'imagenet_2012_challenge_label_map_proto.pbtxt')
@@ -171,12 +169,14 @@ def maybe_download_and_extract():
     print('Succesfully downloaded', filename, statinfo.st_size, 'bytes.')
   tarfile.open(filepath, 'r:gz').extractall(dest_directory)
 
-def main(argv=None):
+
+
+def main(argv="tmp/imageNet/funny_cat.jpg"):
   # Inception-v3 모델을 다운로드하고 압축을 푼다.
   maybe_download_and_extract()
   # 인풋으로 입력할 이미지를 설정한다.
   image = (FLAGS.image_file if FLAGS.image_file else
-           os.path.join(FLAGS.model_dir, 'cropped_panda.jpg'))
+           os.path.join(FLAGS.model_dir, 'funny_cat.jpg'))
   # 고양이 이미지에 대해 prediction
   """image = (FLAGS.image_file if FLAGS.image_file else
            os.path.join(FLAGS.model_dir, 'funny_cat.jpg'))"""
@@ -185,6 +185,7 @@ def main(argv=None):
 
 
 
+
+
 if __name__ == '__main__':
   tf.app.run()
-  print("haha")

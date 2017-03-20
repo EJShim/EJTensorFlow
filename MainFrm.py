@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import *
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import random
@@ -59,6 +60,10 @@ class MyMainWindow(QMainWindow):
         LeftLayout.addWidget(self.button4)
         self.button4.clicked.connect(self.OnLoadModel)
 
+        self.button5 = QPushButton("Load JPEG")
+        LeftLayout.addWidget(self.button5)
+        self.button5.clicked.connect(self.OnLoadImgNet)
+
 
 
     def InitManager(self):
@@ -87,6 +92,20 @@ class MyMainWindow(QMainWindow):
     def OnLoadModel(self):
         self.Mgr.LoadModel()
 
+
+    def OnLoadImgNet(self):
+        fname = QFileDialog.getOpenFileName(self, 'Open file', "./" ,"Image files (*.jpg *.jpeg *.gif)")
+        print(fname[0])
+
+        #Clear Figure
+        self.m_figure.clf()
+
+        #Predict Image Class
+        self.Mgr.inception.PredictImage(fname[0])
+
+        #Update figure
+        self.m_canvas.draw()
+
     def DrawGraph(self):
         self.m_figure.clf()
 
@@ -104,19 +123,9 @@ class MyMainWindow(QMainWindow):
 
 
 
-    def SetLog(self, string):
-        self.m_logBox.appendPlainText(str(string))
+    def SetLog(self, string, clear = False):
 
-
-
-class TrainningThread(QThread):
-
-    taskFinished = pyqtSignal()
-
-    def __init__(self, Mgr):
-        super(QThread, self).__init__(None)
-        self.Mgr = Mgr
-
-    def run(self):
-        self.Mgr.RunTrainning()
-        self.taskFinished.emit()
+        if clear:
+            self.m_logBox.setPlainText(str(string))
+        else:
+            self.m_logBox.appendPlainText(str(string))
