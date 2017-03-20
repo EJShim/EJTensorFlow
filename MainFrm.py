@@ -51,6 +51,14 @@ class MyMainWindow(QMainWindow):
         LeftLayout.addWidget(self.button2)
         self.button2.clicked.connect(self.OnRandomPrediction)
 
+        self.button3 = QPushButton("Save Model")
+        LeftLayout.addWidget(self.button3)
+        self.button3.clicked.connect(self.OnSaveModel)
+
+        self.button4 = QPushButton("Load Model")
+        LeftLayout.addWidget(self.button4)
+        self.button4.clicked.connect(self.OnLoadModel)
+
 
 
     def InitManager(self):
@@ -63,19 +71,25 @@ class MyMainWindow(QMainWindow):
 
 
     def OnRandomPrediction(self):
+        #clear Canvas
+        self.m_figure.clf()
 
+        #Get Image and Run Prediction
         image, idx = self.Mgr.GetRandomImage()
-
-        # plot = self.m_figure.add_subplot(121)
-        # plot.imshow(image)
-        # plot.axis('off')
-
         self.Mgr.RunPrediction(image)
 
+        #Redraw Canvas
         self.m_canvas.draw()
 
+    def OnSaveModel(self):
+        self.Mgr.SaveModel()
+
+    def OnLoadModel(self):
+        self.Mgr.LoadModel()
 
     def DrawGraph(self):
+        self.m_figure.clf()
+
         ax = self.m_figure.add_subplot(111)
         ax.axis('on')
         ax.set_title("Loss Function Visualization")
@@ -86,6 +100,7 @@ class MyMainWindow(QMainWindow):
         ax.plot( self.Mgr.plotX, self.Mgr.plotY, 'ro-' )
 
         self.m_canvas.draw()
+
 
 
 

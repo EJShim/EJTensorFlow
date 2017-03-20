@@ -148,13 +148,12 @@ cweights = sess.run(weights['out'])
 plt.matshow(inputimg[0, :, :, 0], cmap=plt.get_cmap('gray'))
 plt.title("Input image")
 plt.colorbar()
-plt.show()
+
 
 # Plot class activation maps
 fig, axs = plt.subplots(2, 5, figsize=(15, 6))
 
-#Class Activation Map
-camavg = np.zeros((14, 14))
+
 for i in range(10):
     predlabel   = np.argmax(outval)
     predweights = cweights[:, i:i+1]
@@ -170,3 +169,5 @@ for i in range(10):
 fig.subplots_adjust(right=0.8)
 cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
 fig.colorbar(im, cax=cbar_ax)
+
+plt.show()

@@ -8,7 +8,7 @@ class E_Manager:
     def __init__(self, window):
 
         self.window = window
-        self.sess = None
+        self.sess = tf.Session()
         self.plotX = []
         self.plotY = []
 
@@ -94,6 +94,9 @@ class E_Manager:
         # MaxPool2D wrapper
         return tf.nn.max_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
 
+    def avgpool2d(self, x, k=2):
+        return tf.nn.avg_pool(x, ksize=[1, k, k, 1], strides=[1, k, k, 1], padding='SAME')
+
 
     # Create model
     def conv_net(self, x, weights, biases, dropout):
@@ -111,12 +114,13 @@ class E_Manager:
         # Convolution Layer
         conv2 = self.conv2d(maxpool1, weights['wc2'], biases['bc2'])
         # Max Pooling (down-sampling)
-        maxpool2 = self.maxpool2d(conv2, k=2)
+        maxpool2 = self.avgpool2d(conv2, k=2)
 
         # Fully connected layer
         # Reshape conv2 output to fit fully connected layer input
-        fc1 = tf.reshape(maxpool2, [-1, weights['wd1'].get_shape().as_list()[0]])
-        fc1 = tf.add(tf.matmul(fc1, weights['wd1']), biases['bd1'])
+        dense = tf.reshape(maxpool2, [-1, weights['wd1'].get_shape().as_list()[0]])
+
+        fc1 = tf.add(tf.matmul(dense, weights['wd1']), biases['bd1'])
         fc1 = tf.nn.relu(fc1)
         # Apply Dropout
         # fc1 = tf.nn.dropout(fc1, dropout)
@@ -150,7 +154,6 @@ class E_Manager:
         init = tf.global_variables_initializer()
 
         # Launch the graph
-        self.sess = tf.Session()
         self.sess.run(init)
 
         step = 1
@@ -173,12 +176,24 @@ class E_Manager:
                 QApplication.processEvents()
                 self.window.DrawGraph()
 
-
-
-
             step += 1
 
         self.window.SetLog("Optimization Finished!")
+
+
+    def SaveModel(self):
+        saver = tf.train.Saver()
+        save_path = saver.save(self.sess, "./models/model.ckpt")
+
+        self.window.SetLog("Model Saved in ./models/model.ckpt")
+
+    def LoadModel(self):
+        saver = tf.train.Saver()
+        saver = tf.train.import_meta_graph('./models/model.ckpt.meta')
+        saver.restore(self.sess, "./models/model.ckpt")
+
+        self.window.SetLog("Model Loaded from ./models/model.ckpt")
+
 
     def RunPrediction(self, image):
 
@@ -219,13 +234,7 @@ class E_Manager:
 
 
             #Class Activation Map
-            # camavg = np.zeros((14, 14))
-
-            predlabel   = res
-            predweights = cweight[:, predlabel:predlabel+1]
-
-            print(predweights.shape)
-
+            predweights = cweight[:, res:res+1]
             camsum = np.zeros((14, 14))
             for j in range(64): #Number of conv2 output filters
                 camsum = camsum + predweights[j]*conv2[0, :, :, j]
@@ -234,7 +243,7 @@ class E_Manager:
             camavg = camsum / 256
             plot = self.window.m_figure.add_subplot(2,3,4)
             plot.set_title("Activation Map")
-            plot.imshow(camavg, cmap=plt.get_cmap('gray'))
+            plot.imshow(camavg)
             plot.axis('off')
 
 
